@@ -12,6 +12,10 @@ TEMPLATE = r"C:\pyhost\tpl.xlsx"
 OUT      = r"C:\pyhost\out.xlsx"
 SHEET    = 1                                   # 몇 번째 시트에 쓸지 (1부터)
 
+# [추가] 호스트->확장 메시지는 1MB 제한. JSON 에서 한글 1자 = "\uXXXX" 6바이트라
+# 10만 자면 최대 600KB. 안전하게 이 단위로 잘라 보낸다.
+CHUNK = 100000
+
 def read_message():
     raw = sys.stdin.read(4)
     if len(raw) < 4:
@@ -49,8 +53,12 @@ while True:
         break
     try:
         cmd = msg.get("cmd")
-        if cmd == "read":
-            send_message({"ok": True, "text": read_file()})
+        if cmd == "read":                      # [수정] 청크 로딩
+            text = read_file()                 # off 부터 CHUNK 글자만 보낸다
+            off = msg.get("off", 0)
+            part = text[off:off + CHUNK]
+            send_message({"ok": True, "text": part, "off": off + len(part),
+                          "more": off + len(part) < len(text)})
         elif cmd == "write":
             write_file(msg["text"], "wb")
             send_message({"ok": True})
@@ -60,6 +68,11 @@ while True:
         elif cmd == "xlsx":                    # [추가] {"cmd":"xlsx","cells":{"B3":12.3,...}}
             xlsx.fill(TEMPLATE, OUT, SHEET, msg["cells"])
             send_message({"ok": True, "path": OUT})
+        elif cmd == "xlsx_new":                # [추가] 템플릿 없이 새로 만들기
+            # {"cmd":"xlsx_new","cells":{"B3":12.3} 또는 [[행],[행]],"out":...,"title":...}
+            path = msg.get("out") or OUT
+            xlsx.create(path, msg["cells"], msg.get("title", u"Sheet1"))
+            send_message({"ok": True, "path": path})
         else:
             send_message({"ok": False, "error": "unknown cmd"})
     except Exception:

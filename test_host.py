@@ -27,3 +27,21 @@ def call(msg):
 print call({"cmd": "write", "text": u"hello from test"})
 r = call({"cmd": "read"})
 print r["ok"], repr(r["text"])
+
+# [추가] 청크 로딩: CHUNK(10만 자) 를 넘는 파일이 조각나서 다 오는지
+big = u"가" * 250000
+print call({"cmd": "write", "text": big})
+acc, off, n = u"", 0, 0
+while True:
+    r = call({"cmd": "read", "off": off})
+    acc += r["text"]
+    off = r["off"]
+    n += 1
+    if not r["more"]:
+        break
+print "청크", n, "개", len(acc), acc == big
+
+# [추가] 템플릿 없이 새 xlsx
+print call({"cmd": "xlsx_new",
+            "cells": [[u"이름", u"값"], [u"기온", 12.5]],
+            "title": u"관측"})
