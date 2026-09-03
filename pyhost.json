@@ -1,0 +1,7 @@
+{
+  "name": "com.local.pyhost",
+  "description": "file bridge",
+  "path": "C:\\pyhost\\pyhost.bat",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://여기에32자ID/"]
+}
